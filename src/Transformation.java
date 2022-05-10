@@ -3,25 +3,21 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 /**class Transformation
  * @author Matteo Falkenberg
- * @version 1.0, 06.04.2022
+ * @version 1.1, 10.05.2022
  */
 
 public class Transformation extends Thread {
 
-    private ArrayBlockingQueue<Point> queueToTransform;
-    private List<Point> listTransformed;
+    private ArrayBlockingQueue<Point3D> queueToTransform;
+    private List<Point3D> listTransformed;
     private int pointAmount;
     private float degree;
-    private int depth;
-    private int transformLimit;
 
-    public Transformation(ArrayBlockingQueue<Point> queueToTransform, List<Point> listTransformed, int pointAmount, float degree, int depth, int transformLimit) {
+    public Transformation(ArrayBlockingQueue<Point3D> queueToTransform, List<Point3D> listTransformed, int pointAmount, float degree) {
         this.queueToTransform = queueToTransform;
         this.listTransformed = listTransformed;
         this.pointAmount = pointAmount;
         this.degree = degree;
-        this.depth = depth;
-        this.transformLimit = transformLimit;
     }
 
 
@@ -31,12 +27,12 @@ public class Transformation extends Thread {
         while (listTransformed.size() < pointAmount) {
             try {
                 if (!queueToTransform.isEmpty()) {
-                    Point pointToTransform = transform(queueToTransform.take(), degree, depth);
+                    Point3D point3DToTransform = transform(queueToTransform.take(), degree);
 
-                    if (pointToTransform.getTransformAmount() == transformLimit)
-                        listTransformed.add(pointToTransform);
+                    if (point3DToTransform.isFullyTransformed())
+                        listTransformed.add(point3DToTransform);
                     else
-                        queueToTransform.add(pointToTransform);
+                        queueToTransform.add(point3DToTransform);
                 }
             }
             catch (InterruptedException e) {
@@ -47,19 +43,73 @@ public class Transformation extends Thread {
 
 
     // transforms a point once/multiple times depending on depth as well as the transformAmount and transformLimit
-    private Point transform(Point point, float degree, int depth) {
-        int transformAmount = point.getTransformAmount();
+    private Point3D transform(Point3D point3D, float degree) {
 
-        if (depth > 0 && transformAmount < transformLimit) {
-            transformAmount++;
+        if (!point3D.isTransformedZ()) {
+            float pointTransform[] = point3D.getTransform();
+            float zTransform[][] = {
+                    {(float)Math.cos(Math.toRadians(degree)), (float)-Math.sin(Math.toRadians(degree)), 0f, 0f},
+                    {(float)Math.sin(Math.toRadians(degree)), (float)Math.cos(Math.toRadians(degree)), 0f, 0f},
+                    {0f, 0f, 1f, 0f},
+                    {0f, 0f, 0f, 1f},
+            };
 
-            float transX = (float) (point.getX() * Math.cos(Math.toRadians(degree)) - point.getY() * Math.sin(Math.toRadians(degree)));
-            float transY = (float) (point.getX() * Math.sin(Math.toRadians(degree)) + point.getY() * Math.cos(Math.toRadians(degree)));
-            Point transPoint = transform(new Point(transX, transY, transformAmount), degree, depth - 1);
-            return transPoint;
+            //System.out.println("\nTransform 1 (z):");
+
+            float newTransform[] = matrixMultiplication(pointTransform, zTransform);
+
+            point3D.setTransform(newTransform);
+            point3D.setTransformedZ(true);
         }
-        else
-            return point;
+        else if (!point3D.isTransformedY()) {
+            float pointTransform[] = point3D.getTransform();
+            float yTransform[][] = {
+                    {(float)Math.cos(Math.toRadians(degree)), 0f, (float)Math.sin(Math.toRadians(degree)), 0f},
+                    {0f, 1f, 0f, 0f},
+                    {(float)-Math.sin(Math.toRadians(degree)), 0f, (float)Math.cos(Math.toRadians(degree)), 0f},
+                    {0f, 0f, 0f, 1f},
+            };
+
+            //System.out.println("\nTransform 2 (y):");
+
+            float newTransform[] = matrixMultiplication(pointTransform, yTransform);
+
+            point3D.setTransform(newTransform);
+            point3D.setTransformedY(true);
+        }
+        else if (!point3D.isTransformedX()) {
+            float pointTransform[] = point3D.getTransform();
+            float xTransform[][] = {
+                    {1f, 0f, 0f, 0f},
+                    {0f, (float)Math.cos(Math.toRadians(degree)), (float)-Math.sin(Math.toRadians(degree)), 0f},
+                    {0f, (float)Math.sin(Math.toRadians(degree)), (float)Math.cos(Math.toRadians(degree)), 0f},
+                    {0f, 0f, 0f, 1f},
+            };
+
+            //System.out.println("\nTransform 3 (x):");
+
+            float newTransform[] = matrixMultiplication(pointTransform, xTransform);
+
+            point3D.setTransform(newTransform);
+            point3D.setTransformedX(true);
+        }
+
+        return point3D;
+    }
+
+
+    private float[] matrixMultiplication(float pointTransform[], float axisTransform[][]) {
+        float newTransform[] = new float[4];
+
+        for (int i = 0; i < 4; i++) {
+            newTransform[i] = 0;
+            for (int k = 0; k < 4; k++) {
+                newTransform[i] += axisTransform[i][k] * pointTransform[k];
+            }
+            //System.out.println(newTransform[i]);  //printing matrix element
+        }
+
+        return newTransform;
     }
 
 }

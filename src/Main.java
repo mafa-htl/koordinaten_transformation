@@ -5,7 +5,7 @@ import java.util.concurrent.*;
 
 /**class Main
  * @author Matteo Falkenberg
- * @version 1.0, 06.04.2022
+ * @version 1.1, 10.05.2022
  */
 
 public class Main {
@@ -14,8 +14,9 @@ public class Main {
 
         // amount of points and thread safe containers
         int pointAmount = 1000000;   // amount of points to be created
-        ArrayBlockingQueue<Point> queueToBeTransformed = new ArrayBlockingQueue<>(pointAmount);   // contains points to be transformed
-        List<Point> listTransformed = new Vector<>();   // contains points that finished transformation
+        //pointAmount = 1;
+        ArrayBlockingQueue<Point3D> queueToBeTransformed = new ArrayBlockingQueue<>(pointAmount);   // contains points to be transformed
+        List<Point3D> listTransformed = new Vector<>();   // contains points that finished transformation
 
         // amount of threads and ThreadPool
         int transformationThreadAmount = 3;
@@ -23,12 +24,10 @@ public class Main {
 
         // variables for Transformation threads
         float transformDegrees = 5f;   // degrees per transform
-        int transformDepth = 5;   // depth of recursive transform function
-        int transformLimit = 5;   // max amount of transforms that should be carried out
 
         // filling ThreadPool with Transformation threads
         for (int i = 0; i < transformationThreadAmount; i++) {
-            executor.execute(new Transformation(queueToBeTransformed, listTransformed, pointAmount, transformDegrees, transformDepth, transformLimit));
+            executor.execute(new Transformation(queueToBeTransformed, listTransformed, pointAmount, transformDegrees));
         }
 
         // variables for creation of points
@@ -36,6 +35,7 @@ public class Main {
         Random r = new Random();
         float xMax = 12f;
         float yMax = 24f;
+        float zMax = 12f;
 
         // signal/track when the process actually starts
         System.out.println("Start creating points and transforming them ...\n");
@@ -45,8 +45,12 @@ public class Main {
         while (pointsCreated < pointAmount) {
             float x = r.nextFloat() * xMax;
             float y = r.nextFloat() * yMax;
-            Point point = new Point(x, y, 0);
-            queueToBeTransformed.add(point);
+            float z = r.nextFloat() * zMax;
+            Point3D point3D = new Point3D(x, y, z);
+            queueToBeTransformed.add(point3D);
+
+            //System.out.println("Initial transform:");
+            //System.out.printf("%f\n%f\n%f\n\n", x, y, z);
 
             pointsCreated++;
         }
